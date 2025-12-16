@@ -227,6 +227,144 @@ float CalculateWordWidth(const char *word)
     return width;
 }
 
+void GenerateGCode(const char *text)
+{
+    InitialiseTextPosition();
+    const char *p = text;
+
+    while (*p) {
+        while (*p && isspace(*p)) {
+            if (*p == '\n') AdvanceToNextLine();
+            p++;
+        }
+        if (!*p) break;
+
+        int i = 0;
+        while (*p && !isspace(*p) && i < MAX_WORD_LENGTH - 1)
+            WordBuffer[i++] = *p++;
+        WordBuffer[i] = '\0';
+
+        if (CalculateWordWidth(WordBuffer) >
+            (Layout.maxLineWidth - Layout.currentLineWidth)) {
+            AdvanceToNextLine();
+        }
+
+        RenderWord(WordBuffer);
+    }
+}
+
+int GenerateTextGCodeFromFile(const char *filename)
+{
+    FILE *fp = fopen(filename, "r");
+    if (!fp) return 0;
+
+    InitialiseTextPosition();
+
+    while (GetNextWord(fp, WordBuffer, MAX_WORD_LENGTH)) {
+        if (CalculateWordWidth(WordBuffer) >
+            (Layout.maxLineWidth - Layout.currentLineWidth)) {
+            AdvanceToNextLine();
+        }
+        RenderWord(WordBuffer);
+    }
+
+    fclose(fp);
+    return 1;
+}
+
+// rendering the words
+void RenderWord(const char *word)
+{
+    for (int i = 0; word[i]; i++) {
+        RenderCharacter(word[i]);
+        float w = FontData[(unsigned char)word[i]].widthUnits * Layout.scaleFactor;
+        Layout.cursorX += w;
+        Layout.currentLineWidth += w;
+    }
+
+    float space = FontData[' '].widthUnits * Layout.scaleFactor;
+    Layout.cursorX += space;
+    Layout.currentLineWidth += space;
+}
+
+void RenderCharacter(char c)
+{
+    FontChar *fc = &FontData[(unsigned char)c];
+    if (!fc->defined) return;
+
+    char buffer[100];
+    int lastPen = -1;
+
+    for (int i = 0; i < fc->numStrokes; i++) {
+        Stroke *s = &fc->strokes[i];
+        float x = Layout.cursorX + s->dx * Layout.scaleFactor;
+        float y = Layout.cursorY + s->dy * Layout.scaleFactor;
+
+        if (s->penDown != lastPen) {
+            sprintf(buffer, s->penDown ? "S1000\n" : "S0\n");
+            SendGCodeToRobot(buffer);
+            lastPen = s->penDown;
+        }
+
+        sprintf(buffer,
+                s->penDown ? "G1 X%.2f Y%.2f F1000\n"
+                           : "G0 X%.2f Y%.2f F1000\n",
+                x, y);
+        SendGCodeToRobot(buffer);
+    }
+}
+
+//loading the font data
+int LoadFontData(const char *filename, FontChar fontData[256])
+{
+    FILE *fp = fopen(filename, "r");
+    if (!fp) return 0;
+
+    for (int i = 0; i < 256; i++)
+        fontData[i].defined = 0;
+
+    int marker, code, count;
+    while (fscanf(fp, "%d %d %d", &marker, &code, &count) == 3 && marker == 999) {
+        FontChar *fc = &fontData[code];
+        fc->numStrokes = count - 1;
+
+        for (int i = 0; i < count; i++) {
+            int x, y, pen;
+            fscanf(fp, "%d %d %d", &x, &y, &pen);
+            if (i < fc->numStrokes) {
+                fc->strokes[i].dx = x;
+                fc->strokes[i].dy = y;
+                fc->strokes[i].penDown = pen;
+            } else {
+                fc->widthUnits = (float)x;
+            }
+        }
+        fc->defined = 1;
+    }
+
+    fclose(fp);
+    return 1;
+}
+
+// controls for the robot
+void SendGCodeToRobot(const char *command)
+{
+    PrintBuffer((char*)command);
+    WaitForReply();
+    Sleep(100);
+}
+
+void DrawEndShape(void)
+{
+    SendGCodeToRobot("S0\n");
+    SendGCodeToRobot("G0 X40 Y40 F1000\n");
+    SendGCodeToRobot("S1000\n");
+    SendGCodeToRobot("G1 X50 Y50 F1000\n");
+    SendGCodeToRobot("G1 X60 Y40 F1000\n");
+    SendGCodeToRobot("G1 X50 Y30 F1000\n");
+    SendGCodeToRobot("G1 X40 Y40 F1000\n");
+    SendGCodeToRobot("S0\n");
+}
 // Send the data to the robot - note in 'PC' mode you need to hit space twice
 // as the dummy 'WaitForReply' has a getch() within the function.
 void SendCommands (char *buffer )
