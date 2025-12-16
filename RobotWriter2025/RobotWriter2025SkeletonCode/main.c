@@ -7,6 +7,37 @@
 
 #define bdrate 115200               /* 115200 baud */
 
+// definition for the writing parameters
+#define MAX_WORD_LENGTH     64
+#define LEFT_MARGIN_MM      10.0f
+#define TOP_LINE_Y_MM       80.0f
+#define LINE_SPACING_MM     5.0f
+#define MAX_LINE_WIDTH_MM   180.0f
+
+// definition for font structures
+typedef struct {
+    float dx;
+    float dy;
+    int penDown;   // 0 = pen up, non-zero = pen down
+} Stroke;
+
+typedef struct {
+    Stroke strokes[128];
+    int   numStrokes;
+    float widthUnits;
+    int   defined;
+} FontChar;
+
+// structure to hold the state of the text layout
+typedef struct {
+    float scaleFactor;
+    float cursorX;
+    float cursorY;
+    float currentLineWidth;
+    float maxLineWidth;
+    float lineSpacing;
+} TextLayoutState;
+
 void SendCommands (char *buffer );
 
 int main()
