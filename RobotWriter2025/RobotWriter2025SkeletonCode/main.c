@@ -38,6 +38,46 @@ typedef struct {
     float lineSpacing;
 } TextLayoutState;
 
+//global variables
+FontChar FontData[256];
+
+TextLayoutState Layout = {
+    1.0f,
+    LEFT_MARGIN_MM,
+    TOP_LINE_Y_MM,
+    0.0f,
+    MAX_LINE_WIDTH_MM,
+    LINE_SPACING_MM
+};
+
+static char WordBuffer[MAX_WORD_LENGTH];
+
+// functions
+int   GetTextHeight(void);
+float CalculateScaleFactor(int textHeightMm, int baseUnits);
+
+int   LoadFontData(const char *filename, FontChar fontData[256]);
+void  ScaleFont(FontChar *fontData, float scaleFactor);
+
+int   ReadTextFile(char *buffer, const char *filename, int maxLen);
+
+void  InitialiseTextPosition(void);
+void  AdvanceToNextLine(void);
+int   GetNextWord(FILE *textFile, char *buffer, int maxLen);
+float CalculateWordWidth(const char *word);
+
+void  GenerateGCode(const char *text);
+int   GenerateTextGCodeFromFile(const char *filename);
+
+void  RenderWord(const char *word);
+void  RenderCharacter(char c);
+
+void  DrawEndShape(void);
+
+void  SendGCodeToRobot(const char *command);
+void  MoveToOrigin(void);
+
+
 void SendCommands (char *buffer );
 
 int main()
