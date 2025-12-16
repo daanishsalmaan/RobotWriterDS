@@ -80,11 +80,12 @@ void  MoveToOrigin(void);
 
 void SendCommands (char *buffer );
 
-int main()
+int main(void)
 {
 
     //char mode[]= {'8','N','1',0};
     char buffer[100];
+    int textHeight;
 
     // If we cannot open the port then give up immediately
     if ( CanRS232PortBeOpened() == -1 )
@@ -115,26 +116,15 @@ int main()
     sprintf (buffer, "S0\n");
     SendCommands(buffer);
 
+    // user input
+    int textHeight = GetTextHeight();
+    Layout.scaleFactor = CalculateScaleFactor(textHeight, 18);
 
-    // These are sample commands to draw out some information - these are the ones you will be generating.
-    sprintf (buffer, "G0 X-13.41849 Y0.000\n");
-    SendCommands(buffer);
-    sprintf (buffer, "S1000\n");
-    SendCommands(buffer);
-    sprintf (buffer, "G1 X-13.41849 Y-4.28041\n");
-    SendCommands(buffer);
-    sprintf (buffer, "G1 X-13.41849 Y0.0000\n");
-    SendCommands(buffer);
-    sprintf (buffer, "G1 X-13.41089 Y4.28041\n");
-    SendCommands(buffer);
-    sprintf (buffer, "S0\n");
-    SendCommands(buffer);
-    sprintf (buffer, "G0 X-7.17524 Y0\n");
-    SendCommands(buffer);
-    sprintf (buffer, "S1000\n");
-    SendCommands(buffer);
-    sprintf (buffer, "G0 X0 Y0\n");
-    SendCommands(buffer);
+    // load the font data from the txt file
+    if (!LoadFontData("SingleStrokeFont.txt", FontData)) {
+        CloseRS232Port();
+        return 1;
+    }
 
     // Before we exit the program we need to close the COM port
     CloseRS232Port();
