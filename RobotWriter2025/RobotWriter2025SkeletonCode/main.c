@@ -10,9 +10,9 @@
 // definition for the writing parameters
 #define MAX_WORD_LENGTH     64
 #define LEFT_MARGIN_MM      10.0f
-#define TOP_LINE_Y_MM       80.0f
-#define LINE_SPACING_MM     5.0f
-#define MAX_LINE_WIDTH_MM   180.0f
+#define TOP_LINE_Y_MM       0.0f
+#define LINE_SPACING_MM     10.0f
+#define MAX_LINE_WIDTH_MM   140.0f
 
 // definition for font structures
 typedef struct {
@@ -50,7 +50,7 @@ TextLayoutState Layout = {
     LINE_SPACING_MM
 };
 
-static char WordBuffer[MAX_WORD_LENGTH];
+char WordBuffer[MAX_WORD_LENGTH];
 
 // functions
 int   GetTextHeight(void);
@@ -109,17 +109,15 @@ int main(void)
     printf ("\nThe robot is now ready to draw\n");
 
         //These commands get the robot into 'ready to draw mode' and need to be sent before any writing commands
-    sprintf (buffer, "G1 X0 Y0 F1000\n");
-    SendCommands(buffer);
-    sprintf (buffer, "M3\n");
-    SendCommands(buffer);
-    sprintf (buffer, "S0\n");
-    SendCommands(buffer);
+    SendGCodeToRobot("G1 X0 Y0 F1000\n");
+    SendGCodeToRobot("M3\n");
+    SendGCodeToRobot("S0\n");  // pen up
 
     // user input
     int textHeight = GetTextHeight();
     Layout.scaleFactor = CalculateScaleFactor(textHeight, 18);
-
+    Layout.lineSpacing = (float)textHeight + 5.0f;
+    
     // load the font data from the txt file
     if (!LoadFontData("SingleStrokeFont.txt", FontData)) {
         CloseRS232Port();
@@ -150,11 +148,15 @@ int main(void)
 // user input for text height
 int GetTextHeight(void)
 {
-    int h;
-    do {
-        printf("Enter text height (4–10 mm): ");
-        scanf("%d", &h);
-    } while (h < 4 || h > 10);
+    int h = 0;
+    printf("Enter text height (4–10 mm): ");
+    scanf("%d", &h);
+
+    if (h < 4 || h > 10) {
+        printf("Invalid height. Please use a value between 4 and 10 mm.\n");
+        CloseRS232Port();
+        exit(1);
+    }
     return h;
 }
 
@@ -182,7 +184,7 @@ void AdvanceToNextLine(void)
 {
     Layout.cursorX = LEFT_MARGIN_MM;
     Layout.cursorY -= Layout.lineSpacing;
-    Layout.currentLineWidth = 0.0f;
+    Layout.currentLineWidth = 5.0f;
 }
 
 int ReadTextFile(char *buffer, const char *filename, int maxLen)
