@@ -2,6 +2,7 @@
 #include <stdlib.h>
 //#include <conio.h>
 //#include <windows.h>
+#include <ctype.h>
 #include "rs232.h"
 #include "serial.h"
 
@@ -78,8 +79,6 @@ void  SendGCodeToRobot(const char *command);
 void  MoveToOrigin(void);
 
 
-void SendCommands (char *buffer );
-
 int main(void)
 {
 
@@ -114,7 +113,7 @@ int main(void)
     SendGCodeToRobot("S0\n");  // pen up
 
     // user input
-    int textHeight = GetTextHeight();
+    textHeight = GetTextHeight();
     Layout.scaleFactor = CalculateScaleFactor(textHeight, 18);
     Layout.lineSpacing = (float)textHeight + 5.0f;
     
@@ -207,9 +206,9 @@ int GetNextWord(FILE *textFile, char *buffer, int maxLen)
     do {
         c = fgetc(textFile);
         if (c == EOF) return 0;
-    } while (isspace(c));
+    } while (isspace((unsigned char)c));
 
-    while (c != EOF && !isspace(c)) {
+    while (c != EOF && !isspace((unsigned char)c)) {
         if (i < maxLen - 1) buffer[i++] = (char)c;
         c = fgetc(textFile);
     }
@@ -235,9 +234,8 @@ void GenerateGCode(const char *text)
     const char *p = text;
 
     while (*p) {
-        while (*p && isspace(*p)) {
-            if (*p == '\n') AdvanceToNextLine();
-            p++;
+        while (*p && isspace((unsigned char)*p)) {
+        p++;
         }
         if (!*p) break;
 
@@ -320,28 +318,82 @@ void RenderCharacter(char c)
 int LoadFontData(const char *filename, FontChar fontData[256])
 {
     FILE *fp = fopen(filename, "r");
-    if (!fp) return 0;
+    if (!fp) {
+        fprintf(stderr, "Error: cannot open font file '%s'\n", filename);
+        return 0;
+    }
 
-    for (int i = 0; i < 256; i++)
-        fontData[i].defined = 0;
+    // Initialise all characters as undefined
+    for (int i = 0; i < 256; ++i) {
+        fontData[i].defined    = 0;
+        fontData[i].numStrokes = 0;
+        fontData[i].widthUnits = 0.0f;
+    }
 
-    int marker, code, count;
-    while (fscanf(fp, "%d %d %d", &marker, &code, &count) == 3 && marker == 999) {
-        FontChar *fc = &fontData[code];
-        fc->numStrokes = count - 1;
+    int marker, charCode, count;
+    int eofHit = 0;
 
-        for (int i = 0; i < count; i++) {
-            int x, y, pen;
-            fscanf(fp, "%d %d %d", &x, &y, &pen);
-            if (i < fc->numStrokes) {
-                fc->strokes[i].dx = x;
-                fc->strokes[i].dy = y;
-                fc->strokes[i].penDown = pen;
-            } else {
+    // Read until EOF
+    while (!eofHit && fscanf(fp, "%d %d %d", &marker, &charCode, &count) == 3) {
+        if (marker != 999) {
+            continue;
+        }
+
+        if (charCode < 0 || charCode > 255) {
+            // Skip bogus character codes
+            for (int i = 0; i < count; ++i) {
+                int d1, d2, d3;
+                if (fscanf(fp, "%d %d %d", &d1, &d2, &d3) != 3) {
+                    eofHit = 1;
+                    break;
+                }
+            }
+            continue;
+        }
+
+        FontChar *fc = &fontData[charCode];
+
+        if (count <= 0) {
+            fc->defined    = 0;
+            fc->numStrokes = 0;
+            fc->widthUnits = 0.0f;
+            continue;
+        }
+
+        int x, y, pen;
+        int numStrokeLines = count - 1;   // last line is width marker
+        int storedStrokes  = 0;
+        int linesRead      = 0;
+
+        for (int i = 0; i < count; ++i) {
+            int ret = fscanf(fp, "%d %d %d", &x, &y, &pen);
+            if (ret != 3) {
+                eofHit = 1;
+                break;
+            }
+
+            linesRead++;
+
+            if (i < numStrokeLines && storedStrokes < 128) {
+                fc->strokes[storedStrokes].dx      = (float)x;
+                fc->strokes[storedStrokes].dy      = (float)y;
+                fc->strokes[storedStrokes].penDown = pen;
+                storedStrokes++;
+            }
+
+            if (i == count - 1) {
                 fc->widthUnits = (float)x;
             }
         }
-        fc->defined = 1;
+
+        if (linesRead == count) {
+            fc->numStrokes = storedStrokes;
+            fc->defined    = 1;
+        }
+
+        if (eofHit) {
+            break;
+        }
     }
 
     fclose(fp);
@@ -350,7 +402,6 @@ int LoadFontData(const char *filename, FontChar fontData[256])
 
 // Send the data to the robot - note in 'PC' mode you need to hit space twice
 // as the dummy 'WaitForReply' has a getch() within the function.
-void SendCommands (char *buffer )
 
 void SendGCodeToRobot(const char *command)
 {
