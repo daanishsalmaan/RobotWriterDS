@@ -346,18 +346,6 @@ int LoadFontData(const char *filename, FontChar fontData[256])
     return 1;
 }
 
-// controls for the robot to draw the letters or the 'shape'
-void DrawEndShape(void)
-{
-    SendGCodeToRobot("S0\n");
-    SendGCodeToRobot("G0 X40 Y40 F1000\n");
-    SendGCodeToRobot("S1000\n");
-    SendGCodeToRobot("G1 X50 Y50 F1000\n");
-    SendGCodeToRobot("G1 X60 Y40 F1000\n");
-    SendGCodeToRobot("G1 X50 Y30 F1000\n");
-    SendGCodeToRobot("G1 X40 Y40 F1000\n");
-    SendGCodeToRobot("S0\n");
-}
 // Send the data to the robot - note in 'PC' mode you need to hit space twice
 // as the dummy 'WaitForReply' has a getch() within the function.
 void SendCommands (char *buffer )
