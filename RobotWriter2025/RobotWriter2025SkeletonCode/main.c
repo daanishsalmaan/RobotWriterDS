@@ -126,6 +126,19 @@ int main(void)
         return 1;
     }
 
+    ScaleFont(FontData, Layout.scaleFactor);
+
+    // process the text file and generate g code
+    char textBuffer[4096];
+    if (ReadTextFile(textBuffer, "Test.txt", sizeof(textBuffer))) {
+        GenerateGCode(textBuffer);
+    } else {
+        GenerateTextGCodeFromFile("Test.txt");
+    }   
+
+    DrawEndShape();
+    MoveToOrigin();
+
     // Before we exit the program we need to close the COM port
     CloseRS232Port();
     printf("Com port now closed\n");
