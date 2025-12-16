@@ -346,6 +346,14 @@ int LoadFontData(const char *filename, FontChar fontData[256])
     return 1;
 }
 
+{
+    // printf ("Buffer to send: %s", buffer); // For diagnostic purposes only, normally comment out
+    PrintBuffer (&buffer[0]);
+    WaitForReply();
+    Sleep(100); // Can omit this when using the writing robot but has minimal effect
+    // getch(); // Omit this once basic testing with emulator has taken place
+}
+
 // controls for the robot
 void SendGCodeToRobot(const char *command)
 {
@@ -368,10 +376,4 @@ void DrawEndShape(void)
 // Send the data to the robot - note in 'PC' mode you need to hit space twice
 // as the dummy 'WaitForReply' has a getch() within the function.
 void SendCommands (char *buffer )
-{
-    // printf ("Buffer to send: %s", buffer); // For diagnostic purposes only, normally comment out
-    PrintBuffer (&buffer[0]);
-    WaitForReply();
-    Sleep(100); // Can omit this when using the writing robot but has minimal effect
-    // getch(); // Omit this once basic testing with emulator has taken place
-}
+
