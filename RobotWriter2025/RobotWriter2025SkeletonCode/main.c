@@ -146,6 +146,87 @@ int main(void)
     return (0);
 }
 
+
+// user input for text height
+int GetTextHeight(void)
+{
+    int h;
+    do {
+        printf("Enter text height (4–10 mm): ");
+        scanf("%d", &h);
+    } while (h < 4 || h > 10);
+    return h;
+}
+
+// calculate scale factor
+float CalculateScaleFactor(int textHeightMm, int baseUnits)
+{
+    return (float)textHeightMm / (float)baseUnits;
+}
+
+void ScaleFont(FontChar *fontData, float scaleFactor)
+{
+    (void)fontData;
+    (void)scaleFactor;
+}
+
+// format the text position
+void InitialiseTextPosition(void)
+{
+    Layout.cursorX = LEFT_MARGIN_MM;
+    Layout.cursorY = TOP_LINE_Y_MM;
+    Layout.currentLineWidth = 0.0f;
+}
+
+void AdvanceToNextLine(void)
+{
+    Layout.cursorX = LEFT_MARGIN_MM;
+    Layout.cursorY -= Layout.lineSpacing;
+    Layout.currentLineWidth = 0.0f;
+}
+
+int ReadTextFile(char *buffer, const char *filename, int maxLen)
+{
+    FILE *fp = fopen(filename, "r");
+    if (!fp) return 0;
+
+    int i = 0, c;
+    while ((c = fgetc(fp)) != EOF && i < maxLen - 1)
+        buffer[i++] = (char)c;
+
+    buffer[i] = '\0';
+    fclose(fp);
+    return i;
+}
+
+int GetNextWord(FILE *textFile, char *buffer, int maxLen)
+{
+    int c, i = 0;
+    do {
+        c = fgetc(textFile);
+        if (c == EOF) return 0;
+    } while (isspace(c));
+
+    while (c != EOF && !isspace(c)) {
+        if (i < maxLen - 1) buffer[i++] = (char)c;
+        c = fgetc(textFile);
+    }
+    buffer[i] = '\0';
+    return 1;
+}
+
+float CalculateWordWidth(const char *word)
+{
+    float width = 0.0f;
+    for (int i = 0; word[i]; i++) {
+        unsigned char c = (unsigned char)word[i];
+        if (FontData[c].defined)
+            width += FontData[c].widthUnits * Layout.scaleFactor;
+    }
+    width += FontData[' '].widthUnits * Layout.scaleFactor;
+    return width;
+}
+
 // Send the data to the robot - note in 'PC' mode you need to hit space twice
 // as the dummy 'WaitForReply' has a getch() within the function.
 void SendCommands (char *buffer )
