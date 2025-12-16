@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "c:/Users/ezzgm/OneDrive - The University of Nottingham/Teaching/2025-2026/C Programming Handover 2025/Project24-25/MMME3085_RobotWriterProjectPlanning24-25/BlinkSerial/BlinkSerialPC",
+      "program": "c:/Users/ezzgm/OneDrive - The University of Nottingham/Teaching/2025-2026/C Programming Handover 2025/Project24-25/MMME3085_RobotWriterProjectPlanning24-25/BlinkSerial/BlinkSerialPC/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}
